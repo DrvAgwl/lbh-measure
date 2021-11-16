@@ -1,0 +1,102 @@
+name: main
+on:
+  push:
+    branches: '**'
+
+jobs:
+  # bring up an ephemeral runner
+  setup:
+    runs-on: [self-hosted, runner-controller]
+    outputs:
+      runner_name: ${{ steps.start_runner.outputs.runner_name }}
+    steps:
+      - id: start_runner
+        env:
+          WORKER_TYPE: python
+        run: start-runner
+
+  # this is where the main application specific steps should be run
+  main:
+    needs: [setup]
+    outputs:
+      job_status: ${{ job.status }}
+      project_name: ${{ github.event.repository.name }}
+      branch_name: ${{ steps.extract_branch.outputs.branch }}
+      pr_number: ${{ github.event.number }}
+    runs-on: ${{ needs.setup.outputs.runner_name }}
+    env:
+      BUILDAH_FORMAT: docker
+      MAVEN_OPTS: -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -DinstallAtEnd=true -DdeployAtEnd=true
+      MAVEN_CLI_OPTS: -U -B -e -fae -V
+    steps:
+      - name: Notify slack Starting
+        if: success()
+        id: slack # IMPORTANT: reference this step ID value in future Slack steps
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.DS_SLACK_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v1
+        with:
+          channel_id: C02BZR7L59S
+          status: STARTING
+          color: warning
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Build & Push Docker Image
+        env:
+          HTTP_PROXY: http://cr-proxy-xp-bom.infra.svc:3128/
+          HTTPS_PROXY: http://cr-proxy-xp-bom.infra.svc:3128/
+          NO_PROXY: apt.udaan.io
+          branch: ${{ steps.extract_branch.outputs.branch }}
+        run: buildctl image
+      # same command handles both dev and next deployment (deployment type is decided based on branch name and commit message)
+      - name: Create a next deployment
+        if: ${{(contains(github.event.head_commit.message, '#next') && startsWith(steps.extract_branch.outputs.branch,'next-'))}}
+        env:
+          CLUSTER_ID: cen0
+        run: buildctl deploy dev
+      - name: Deploy to Dev
+        if: ${{ contains(github.event.head_commit.message, '#deploy-to-dev') && (steps.extract_branch.outputs.branch=='master' || steps.extract_branch.outputs.branch=='main') }}
+        env:
+          CLUSTER_ID: cen0
+        run: buildctl deploy dev
+      - name: Deploy to Prod
+        if: ${{ contains(github.event.head_commit.message, '#deploy-to-prod') && (steps.extract_branch.outputs.branch=='master' || steps.extract_branch.outputs.branch=='main') }}
+        env:
+          CLUSTER_ID: sin0
+        run: buildctl deploy prod
+      - name: Notify slack Success
+        if: success()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.DS_SLACK_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v1
+        with:
+          # Updates existing message from the first step
+          message_id: ${{ steps.slack.outputs.message_id }}
+          channel_id: C02BZR7L59S
+          status: SUCCESS
+          color: good
+      - name: Notify slack Fail
+        if: failure()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.DS_SLACK_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v1
+        with:
+          channel_id: C02BZR7L59S
+          status: FAILED
+          color: danger
+
+  # bring down the runner we'd created
+  teardown:
+    needs: [setup, main]
+    if: always()
+    runs-on: [self-hosted, runner-controller]
+    steps:
+      - name: teardown runner
+        run: stop-runner ${{ needs.setup.outputs.runner_name }}

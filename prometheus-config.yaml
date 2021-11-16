@@ -1,0 +1,30 @@
+prometheus: udaan
+endpointSpec:
+  path: /metrics
+  interval: "15s"
+alert-spec:
+  groups:
+    - name: ./blank-python-service.rules
+      rules:
+        - alert: HttpErrors5xx
+          expr: (sum(rate(http_request_duration_seconds_count{namespace="prod", service="blank-python-service", code=~"5.."}[5m]))/sum (rate(http_request_duration_seconds_count{namespace="prod", service="blank-python-service"}[5m])) * 100 > 2) and sum (rate(http_request_duration_seconds_count{namespace="prod", code=~"5..", service="blank-python-service"}[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: error
+            slack_channel: data-science-service-alerts
+            squadcast_service: sc-dataplatform
+            instance: blank-python-service
+          annotations:
+            summary: "HTTP errors 5xx"
+            description: "<@Sai Sharan Tangeda> blank-python-service: SERVER: HTTP requests with status 5xx (> 1%)\n  failures_percent = {{$value}}\n"
+        - alert: APIErrors5xxHighErrorRate
+          expr: ceil(sum(rate(http_request_duration_seconds_count{namespace="prod", service="blank-python-service", code=~"5.."}[5m])) by (resource)/sum (rate(http_request_duration_seconds_count{namespace="prod", service="blank-python-service"}[5m])) by (resource) * 100 > 20 and sum(rate(http_request_duration_seconds_count{namespace="prod", code=~"5..", service="blank-python-service"}[5m])) by (resource) > 0.116)
+          for: 5m
+          labels:
+            severity: error
+            slack_channel: data-science-service-alerts
+            squadcast_service: sc-dataplatform
+            instance: blank-python-service
+          annotations:
+            summary: "API-Wise errors 5xx"
+            description: "<@Sai Sharan Tangdea> blank-python-service: api wise errors, failures_percent = {{$value}}\n"

@@ -1,0 +1,48 @@
+project: blank-python-service
+version: 1.0-SNAPSHOT # Always keep the -SNAPSHOT unless you want overwrite the same image with each deployment
+server:
+  rootPath: /
+  applicationConnectors:
+    - type: http
+      port: 8000
+  adminConnectors:
+    - type: http
+      port: 8000
+kubernetes:
+  cpus: 4
+  mem: 6112
+  workload: general
+  healthcheck: default
+  strategyType: Recreate
+  env:
+    prod:
+      instances: 2
+      cluster: sin0
+      hpaSpec:
+        maxReplicas: 3
+        minReplicas: 2
+        targetCPUUtilizationPercentage: 60
+        targetMemoryUtilizationPercentage: 80
+    dev:
+      instances: 1
+      cluster: cen0
+      hpaSpec:
+        maxReplicas: 2
+        minReplicas: 1
+        targetCPUUtilizationPercentage: 60
+        targetMemoryUtilizationPercentage: 80
+  containerSpec:
+    volumeMounts:
+      - name: ds-models-share
+        mountPath: /models
+  deploymentSpec:
+    strategy:
+      type: Recreate
+    template:
+      spec:
+        volumes:
+          - name: ds-models-share
+            azureFile:
+              secretName: ds-models-common
+              shareName: ds-models-share
+              readOnly: false
