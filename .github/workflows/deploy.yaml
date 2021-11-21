@@ -50,8 +50,6 @@ jobs:
 
       - name: Build & Push Docker Image
         env:
-          HTTP_PROXY: http://cr-proxy-xp-bom.infra.svc:3128/
-          HTTPS_PROXY: http://cr-proxy-xp-bom.infra.svc:3128/
           NO_PROXY: apt.udaan.io
           branch: ${{ steps.extract_branch.outputs.branch }}
         run: buildctl image
