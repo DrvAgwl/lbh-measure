@@ -66,7 +66,6 @@ class ConvertToPCD():
 
         rgb_values = []
         try:
-            import ipdb; ipdb.set_trace()
             for x in int_data:
                 test = x[3]
                 # cast float32 to int so that bitwise operations are possible

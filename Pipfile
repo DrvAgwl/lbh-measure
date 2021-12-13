@@ -17,6 +17,11 @@ pydantic = "*"
 starlette-exporter = "*"
 python-multipart = "*"
 udaan-py-common = {ref = "main", git = "https://github.com/udaan-com/udaan-py-common.git"}
+azure-cosmos = "*"
+omegaconf = "*"
+open3d = "*"
+pytorch-lightning = "*"
+websockets = "*"
 
 [dev-packages]
 

@@ -7,67 +7,68 @@ from torchmetrics.functional import accuracy, iou, dice_score
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
-from data import BagDataset
-from model import DGCNN_semseg
+from .data import BagDataset
+from .model import DGCNN_semseg
 
 
 class ModelBuilder(pl.LightningModule):
-
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.model = DGCNN_semseg(config)
 
     def train_dataloader(self):
-        train_loader = DataLoader(BagDataset(self.config.pcd_dir, self.config.train_data, partition='train', set_normals=False), 
-                              num_workers=2, pin_memory=True, batch_size=self.config.batch_size, drop_last=True)
+        train_loader = DataLoader(
+            BagDataset(self.config.pcd_dir, self.config.train_data, partition="train", set_normals=False),
+            num_workers=2,
+            pin_memory=True,
+            batch_size=self.config.batch_size,
+            drop_last=True,
+        )
         return train_loader
 
     def val_dataloader(self):
-        val_loader = DataLoader(BagDataset(self.config.pcd_dir, self.config.test_data, partition='test', set_normals=False), 
-                            num_workers=2, pin_memory=True, batch_size=self.config.test_batch_size, drop_last=True)
+        val_loader = DataLoader(
+            BagDataset(self.config.pcd_dir, self.config.test_data, partition="test", set_normals=False),
+            num_workers=2,
+            pin_memory=True,
+            batch_size=self.config.test_batch_size,
+            drop_last=True,
+        )
 
         return val_loader
 
     def training_step(self, batch, batch_idx):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
-#         computed_vol = batch[2][0]#.detach().numpy()
-#         gt_vol = batch[3]
-#         name = batch[4]
-        
+        #         computed_vol = batch[2][0]#.detach().numpy()
+        #         gt_vol = batch[3]
+        #         name = batch[4]
+
         seg_pred = self(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-        pred = seg_pred.softmax(1)  #.max(dim=2)[1]
-        loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1,1).squeeze())
-#         print('accuracy_step', accuracy(seg_pred.squeeze(0), seg.squeeze(0)))
+        pred = seg_pred.softmax(1)  # .max(dim=2)[1]
+        loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
+        #         print('accuracy_step', accuracy(seg_pred.squeeze(0), seg.squeeze(0)))
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        output = {
-            'loss': loss, 
-            'pred': pred.detach(), 
-          'seg': seg.detach()
-        }
+        output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
-    
+
     def validation_step(self, batch, batch_idx):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
-#         computed_vol = batch[2][0]#.detach().numpy()
-#         gt_vol = batch[3]
-#         name = batch[4]
-        
+        #         computed_vol = batch[2][0]#.detach().numpy()
+        #         gt_vol = batch[3]
+        #         name = batch[4]
+
         seg_pred = self(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-        pred = seg_pred.softmax(1)#.max(dim=2)[1]              
-        loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1,1).squeeze())
-        
-#         print('accuracy_step----> for', name, pred)
+        pred = seg_pred.softmax(1)  # .max(dim=2)[1]
+        loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
+
+        #         print('accuracy_step----> for', name, pred)
         self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        output = {
-            'loss': loss, 
-            'pred': pred.detach(), 
-            'seg': seg.detach()
-        }
+        output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
 
     def validation_epoch_end(self, outputs):
@@ -75,41 +76,41 @@ class ModelBuilder(pl.LightningModule):
         gt_class = []
         ious = []
         for index, i in enumerate(outputs):
-            pred.append(i['pred'].squeeze(0))
-            gt_class.append(i['seg'].squeeze(0))
-#             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
-            
-#         gt_class = gt_class.to(torch.int16)
+            pred.append(i["pred"].squeeze(0))
+            gt_class.append(i["seg"].squeeze(0))
+        #             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
+
+        #         gt_class = gt_class.to(torch.int16)
         pred = torch.cat(pred)
         seg = torch.cat(gt_class)
-        
+
         acc = accuracy(pred, seg)
         calculated_iou = iou(pred, seg, num_classes=2)
         calculated_dice = dice_score(pred, seg)
-        self.log('validation_accuracy', acc, on_epoch=True, prog_bar=True)
-        self.log('val_iou', calculated_iou, on_epoch=True, prog_bar=True)
-        self.log('val_dice', calculated_dice, on_epoch=True, prog_bar=True)
+        self.log("validation_accuracy", acc, on_epoch=True, prog_bar=True)
+        self.log("val_iou", calculated_iou, on_epoch=True, prog_bar=True)
+        self.log("val_dice", calculated_dice, on_epoch=True, prog_bar=True)
 
-    def training_epoch_end(self, outputs):        
+    def training_epoch_end(self, outputs):
         pred = []
         gt_class = []
         ious = []
         for index, i in enumerate(outputs):
-            pred.append(i['pred'].squeeze(0))
-            gt_class.append(i['seg'].squeeze(0))
-#             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
-            
-#         gt_class = gt_class.to(torch.int16)
+            pred.append(i["pred"].squeeze(0))
+            gt_class.append(i["seg"].squeeze(0))
+        #             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
+
+        #         gt_class = gt_class.to(torch.int16)
         pred = torch.cat(pred)
         seg = torch.cat(gt_class)
-        
+
         acc = accuracy(pred, seg)
         calculated_iou = iou(pred, seg, num_classes=2)
         calculated_dice = dice_score(pred, seg)
-        
-        self.log('train_accuracy', acc, on_epoch=True, prog_bar=True)
-        self.log('train_iou', calculated_iou, on_epoch=True, prog_bar=True)
-        self.log('train_dice', calculated_dice, on_epoch=True, prog_bar=True)
+
+        self.log("train_accuracy", acc, on_epoch=True, prog_bar=True)
+        self.log("train_iou", calculated_iou, on_epoch=True, prog_bar=True)
+        self.log("train_dice", calculated_dice, on_epoch=True, prog_bar=True)
 
     def forward(self, *args, **kwargs):
         return self.model.forward(*args, **kwargs)
@@ -135,7 +136,7 @@ class ModelBuilder(pl.LightningModule):
 
             loss = -(one_hot * log_prb).sum(dim=1).mean()
         else:
-            loss = F.cross_entropy(pred, gold, reduction='mean')
+            loss = F.cross_entropy(pred, gold, reduction="mean")
 
         return loss
 

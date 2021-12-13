@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import mlflow
 from pytorch_lightning.loggers import MLFlowLogger
 
-# from model_builder import ModelBuilder
+from lbh_measure.model_builder import ModelBuilder
 
 # COMMAND ----------
 
@@ -21,10 +21,6 @@ spark.conf.set("spark.sql.execution.arrow.maxRecordsPerBatch", "64")
 import logging
 logger = spark._jvm.org.apache.log4j
 logging.getLogger("py4j.java_gateway").setLevel(logging.ERROR)
-
-# COMMAND ----------
-
-# MAGIC %run ./model_builder
 
 # COMMAND ----------
 

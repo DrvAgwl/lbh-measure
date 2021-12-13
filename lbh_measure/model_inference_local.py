@@ -10,9 +10,9 @@ from tqdm import tqdm
 
 from model_builder import ModelBuilder
 from data import BagDataset
-from server.utils.util import get_colors
+from lbh_measure.utils.util import get_colors
 
-from server.utils.convert_rosbag_to_pcd import ConvertToPCD
+from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
 
 
 def color_pcd(pred, pcd):
@@ -34,11 +34,6 @@ def generate_vis(pred, predicted_pcd, threshold=0.01):
     box_p = np.array(box.points)
     box_filtered = box.select_by_index(np.where(box_p[:, 2]>threshold)[0])
 
-
-    # from sklearn.neighbors import LocalOutlierFactor
-    # clf = LocalOutlierFactor(n_neighbors=2)
-    # out_liers = clf.fit_predict(np.array(box_filtered.points))
-    # box_filtered = box_filtered.select_by_index(np.where(out_liers==1)[0])
 
 
     hull, _ = box_filtered.compute_convex_hull()
@@ -161,9 +156,6 @@ if __name__ == "__main__":
 
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
     config.k = 9
-    # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/mlflow_best.ckpt"
-    # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/epoch=141-step=1561.ckpt"
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt"
     config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
 
@@ -175,8 +167,6 @@ if __name__ == "__main__":
         out = {}
         print("Converting file: {}".format(i))
         file_name = i.split("/")[-1].split('.')[0]
-        # if not file_name == 'SGE00J3JXMN1GR001S':
-            # continue
         pcd = convert_to_pcd.get_pcd(i)
         if pcd is None:
             print("Skipping {} Bag Unindexed bag file".format(file_name))
