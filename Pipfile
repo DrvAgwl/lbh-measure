@@ -19,7 +19,7 @@ python-multipart = "*"
 udaan-py-common = {ref = "main", git = "https://github.com/udaan-com/udaan-py-common.git"}
 azure-cosmos = "*"
 omegaconf = "*"
-open3d = "*"
+open3d = "==0.13.0"
 pytorch-lightning = "*"
 websockets = "*"
 torch = "==1.9.0"
