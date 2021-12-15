@@ -1,4 +1,4 @@
-project: blank-python-service
+project: lbh-measure-python-service
 version: 1.0-SNAPSHOT # Always keep the -SNAPSHOT unless you want overwrite the same image with each deployment
 server:
   rootPath: /
