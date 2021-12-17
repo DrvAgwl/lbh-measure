@@ -22,7 +22,7 @@ class ModelBuilder(pl.LightningModule):
     def train_dataloader(self):
         train_loader = DataLoader(
             BagDataset(self.config.pcd_dir, self.config.train_data, partition="train", set_normals=False),
-            num_workers=16,
+            num_workers=self.config.num_workers,
             pin_memory=True,
             batch_size=self.config.batch_size,
             drop_last=True,
@@ -33,7 +33,7 @@ class ModelBuilder(pl.LightningModule):
     def val_dataloader(self):
         val_loader = DataLoader(
             BagDataset(self.config.pcd_dir, self.config.test_data, partition="test", set_normals=False),
-            num_workers=16,
+            num_workers=self.config.num_workers,
             pin_memory=True,
             batch_size=self.config.test_batch_size,
             drop_last=True,
