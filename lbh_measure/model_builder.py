@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 
 from .data import BagDataset
 from .model import DGCNN_semseg
+from .utils.util import collate_fn_pad
 
 
 class ModelBuilder(pl.LightningModule):
@@ -17,23 +18,26 @@ class ModelBuilder(pl.LightningModule):
         self.config = config
         self.model = DGCNN_semseg(config)
 
+
     def train_dataloader(self):
         train_loader = DataLoader(
             BagDataset(self.config.pcd_dir, self.config.train_data, partition="train", set_normals=False),
-            num_workers=2,
+            num_workers=16,
             pin_memory=True,
             batch_size=self.config.batch_size,
             drop_last=True,
+            collate_fn=collate_fn_pad
         )
         return train_loader
 
     def val_dataloader(self):
         val_loader = DataLoader(
             BagDataset(self.config.pcd_dir, self.config.test_data, partition="test", set_normals=False),
-            num_workers=2,
+            num_workers=16,
             pin_memory=True,
             batch_size=self.config.test_batch_size,
             drop_last=True,
+            collate_fn=collate_fn_pad
         )
 
         return val_loader
@@ -41,15 +45,13 @@ class ModelBuilder(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
-        #         computed_vol = batch[2][0]#.detach().numpy()
-        #         gt_vol = batch[3]
-        #         name = batch[4]
 
         seg_pred = self(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
         pred = seg_pred.softmax(1)  # .max(dim=2)[1]
         loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
-        #         print('accuracy_step', accuracy(seg_pred.squeeze(0), seg.squeeze(0)))
+
+        pred = pred.argmax(-1)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
@@ -57,16 +59,13 @@ class ModelBuilder(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
-        #         computed_vol = batch[2][0]#.detach().numpy()
-        #         gt_vol = batch[3]
-        #         name = batch[4]
 
         seg_pred = self(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
         pred = seg_pred.softmax(1)  # .max(dim=2)[1]
         loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
 
-        #         print('accuracy_step----> for', name, pred)
+        pred = pred.argmax(-1)
         self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
@@ -74,15 +73,12 @@ class ModelBuilder(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         pred = []
         gt_class = []
-        ious = []
         for index, i in enumerate(outputs):
             pred.append(i["pred"].squeeze(0))
             gt_class.append(i["seg"].squeeze(0))
-        #             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
 
-        #         gt_class = gt_class.to(torch.int16)
-        pred = torch.cat(pred)
-        seg = torch.cat(gt_class)
+        pred = torch.nn.utils.rnn.pad_sequence(pred, batch_first=True, padding_value=0)
+        seg = torch.nn.utils.rnn.pad_sequence(gt_class, batch_first=True, padding_value=0)
 
         acc = accuracy(pred, seg)
         calculated_iou = iou(pred, seg, num_classes=2)
@@ -94,15 +90,13 @@ class ModelBuilder(pl.LightningModule):
     def training_epoch_end(self, outputs):
         pred = []
         gt_class = []
-        ious = []
         for index, i in enumerate(outputs):
-            pred.append(i["pred"].squeeze(0))
-            gt_class.append(i["seg"].squeeze(0))
-        #             ious.append(calculate_sem_IoU(i['pred'].squeeze(0), i['seg'].squeeze(0)))
+            for a, b in zip(i['pred'], i['seg']):
+                pred.append(a)
+                gt_class.append(b)
 
-        #         gt_class = gt_class.to(torch.int16)
-        pred = torch.cat(pred)
-        seg = torch.cat(gt_class)
+        pred = torch.nn.utils.rnn.pad_sequence(pred, batch_first=True, padding_value=0)
+        seg = torch.nn.utils.rnn.pad_sequence(gt_class, batch_first=True, padding_value=0)
 
         acc = accuracy(pred, seg)
         calculated_iou = iou(pred, seg, num_classes=2)

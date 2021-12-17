@@ -137,7 +137,7 @@ class BagDataset(Dataset):
             input_tensor[:, 6:9] = torch.tensor(roi_normals)
         
         try:
-          return (input_tensor, labels_one_hot)
+          return input_tensor, labels_one_hot, input_tensor.shape[0]
         except:
           print('FILE NAME---->',file_name)
           raise

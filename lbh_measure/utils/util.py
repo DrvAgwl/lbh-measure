@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pad_sequence
 
 
 def get_colors():
@@ -65,3 +66,10 @@ def calculate_sem_IoU(pred_all, seg):
         IoUs = torch.cat((IoUs, (I_all / U_all)))
     torch.where(pred == sem, 1, 0)
     return IoUs.mean()
+
+
+def collate_fn_pad(batch):
+    points, labels, lengths = tuple(zip(*batch))
+    x = pad_sequence(points, batch_first=True, padding_value=0)
+    y = pad_sequence(labels, batch_first=True, padding_value=0)
+    return x, y, lengths
