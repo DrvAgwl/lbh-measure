@@ -8,7 +8,7 @@ from udaan_common.server import create_fast_api_server
 #from lbh_measure.model_inference import load_model
 #from lbh_measure.model_inference import main, download_file
 #from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
-#from lbh_measure.utils.request_types import PredictVolumeFields
+from lbh_measure.utils.request_types import PredictVolumeFields
 #from lbh_measure.utils import constants
 
 app = create_fast_api_server()
