@@ -25,6 +25,8 @@ websockets = "*"
 torch = "==1.9.0"
 lbh-measure = {path = "."}
 py3rosmsgs = "*"
+pyopengl = "*"
+bagpy = "*"
 
 [dev-packages]
 
