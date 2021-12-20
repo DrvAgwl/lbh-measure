@@ -24,6 +24,7 @@ pytorch-lightning = "*"
 websockets = "*"
 torch = "==1.9.0"
 lbh-measure = {path = "."}
+py3rosmsgs = "*"
 
 [dev-packages]
 

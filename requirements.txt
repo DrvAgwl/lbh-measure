@@ -1,6 +1,6 @@
 absl-py==1.0.0; python_version >= '3.6'
 addict==2.4.0
-aiohttp==3.8.1
+aiohttp==3.8.1; python_version >= '3.6'
 aiosignal==1.2.0; python_version >= '3.6'
 antlr4-python3-runtime==4.8
 anyio==3.4.0; python_full_version >= '3.6.2'
@@ -15,7 +15,7 @@ azure-keyvault-secrets==4.3.0
 cachetools==4.2.4; python_version ~= '3.5'
 certifi==2021.10.8
 cffi==1.15.0
-charset-normalizer==2.0.9; python_version >= '3.5'
+charset-normalizer==2.0.9; python_full_version >= '3.5.0'
 click==8.0.3; python_version >= '3.6'
 cryptography==36.0.0; python_version >= '3.6'
 cycler==0.11.0; python_version >= '3.6'
@@ -25,14 +25,16 @@ fonttools==4.28.3; python_version >= '3.7'
 frozenlist==1.2.0; python_version >= '3.6'
 fsspec[http]==2021.11.1; python_version >= '3.6'
 future==0.18.2; python_version >= '2.6' and python_version not in '3.0, 3.1, 3.2, 3.3'
+git+https://github.com/udaan-com/udaan-py-common.git@c7ea00c8ee608cbef3d1eb46920b2c3780e94c2b#egg=udaan-py-common
+gnupg==2.3.1
 google-auth-oauthlib==0.4.6; python_version >= '3.6'
 google-auth==2.3.3; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'
 greenlet==1.1.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'
 grpcio==1.42.0; python_version >= '3.6'
 h11==0.12.0; python_version >= '3.6'
-httptools==0.3.0
-idna==3.3; python_version >= '3.5'
-importlib-metadata==4.8.2; python_version < '3.10'
+httptools==0.3.0; python_full_version >= '3.5.0'
+idna==3.3; python_full_version >= '3.5.0'
+importlib-metadata==4.8.2; python_version >= '3.6'
 iniconfig==1.1.1
 isodate==0.6.0
 joblib==1.1.0; python_version >= '3.6'
@@ -49,11 +51,14 @@ omegaconf==2.1.1
 open3d==0.13.0
 packaging==21.3; python_version >= '3.6'
 pandas==1.1.5
+pathlib==1.0.1
 pillow==8.4.0
 pluggy==1.0.0; python_version >= '3.6'
 portalocker==1.7.1
 prometheus-client==0.12.0
-protobuf==3.19.1; python_version >= '3.5'
+protobuf==3.19.1; python_full_version >= '3.5.0'
+psutil==5.8.0; python_version >= '2.6' and python_version not in '3.0, 3.1, 3.2, 3.3'
+py3rosmsgs==1.18.1
 py==1.11.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'
 pyasn1-modules==0.2.8
 pyasn1==0.4.8
@@ -63,21 +68,22 @@ pydeprecate==0.3.1; python_version >= '3.6'
 pyjwt[crypto]==2.3.0; python_version >= '3.6'
 pyodbc==4.0.32
 pyparsing==3.0.6; python_version >= '3.6'
+pyserial==3.5
 pytest==6.2.5; python_version >= '3.6'
 python-dateutil==2.8.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
-python-dotenv==0.19.2
+python-dotenv==0.19.2; python_full_version >= '3.5.0'
 python-multipart==0.0.5
 pytorch-lightning==1.5.5
 pytz==2021.3
 pyyaml==6.0; python_version >= '3.6'
 requests-oauthlib==1.3.0
 requests==2.26.0
-rsa==4.8; python_version >= '3.6'
+rsa==4.8; python_version >= '3.6' and python_version < '4'
 scikit-learn==1.0.1; python_version >= '3.7'
 scipy==1.7.3; python_version < '3.11' and python_version >= '3.7'
 setuptools==59.5.0
 six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
-sniffio==1.2.0; python_version >= '3.5'
+sniffio==1.2.0; python_full_version >= '3.5.0'
 sqlalchemy==1.4.27; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'
 starlette-exporter==0.11.0
 starlette==0.16.0
@@ -92,8 +98,8 @@ tqdm==4.62.3; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 
 typing-extensions==4.0.1; python_version >= '3.6'
 urllib3==1.26.7; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'
 uvicorn[standard]==0.16.0
-uvloop==0.16.0
-watchgod==0.7
+uvloop==0.16.0; python_version >= '3.7'
+watchgod==0.7; python_full_version >= '3.5.0'
 websockets==10.1
 werkzeug==2.0.2; python_version >= '3.6'
 wheel==0.36.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'
