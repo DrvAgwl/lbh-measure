@@ -5,23 +5,25 @@ from udaan_common.logging import logger
 from udaan_common.resources.cosmos.cosmos_client_builder import CosmosClientBuilder
 from udaan_common.server import create_fast_api_server
 
-from lbh_measure.model_inference import load_model
-from lbh_measure.model_inference import main, download_file
-from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
-from lbh_measure.utils.request_types import PredictVolumeFields
-from lbh_measure.utils import constants
+#from lbh_measure.model_inference import load_model
+#from lbh_measure.model_inference import main, download_file
+#from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
+#from lbh_measure.utils.request_types import PredictVolumeFields
+#from lbh_measure.utils import constants
 
 app = create_fast_api_server()
 # cosmos_client = CosmosClientBuilder()
 
-config = omegaconf.OmegaConf.load("../lbh_measure/conf.yml")
-config.model_path = constants.ML_MODEL_PATH
+def get_model():
+    config = omegaconf.OmegaConf.load("../lbh_measure/conf.yml")
+    config.model_path = constants.ML_MODEL_PATH
 
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
 
-model = load_model(config)
-model = model.to(device)
+    model = load_model(config)
+    model = model.to(device)
+    return model
 
 
 @app.get("/healthcheck")
