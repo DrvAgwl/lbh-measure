@@ -1,0 +1,24 @@
+# model_path: /Users/nikhil.k/data/dev/lbh/dgcnn.pytorch/pretrained/semseg/model_6.t7
+# model_path: /Users/nikhil.k/data/dev/lbh/dgcnn.pytorch/pretrained/model.partseg.t7
+
+model: dgcnn
+cuda: False
+#pcd_dir: '/Users/nikhil.k/data/dev/lbh/converted-bag/'
+pcd_dir: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/converted_pcd_nov_25'
+#train_data: '/Users/nikhil.k/data/dev/lbh/converted-bag/labels/train_labels'
+train_data: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/labels'
+test_data: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/labels'
+#test_data: '/Users/nikhil.k/data/dev/lbh/converted-bag/labels/test_labels'
+model_path: '/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt'
+embs: 1024
+dropout: 0.5
+emb_dims: 1024
+k: 9
+lr: 1e-3
+scheduler: cos
+epochs: 100
+exp_name: test_1
+batch_size: 4
+num_workers: 16
+test_batch_size: 1
+use_sgd: False

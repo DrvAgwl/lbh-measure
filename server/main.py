@@ -17,7 +17,7 @@ app = create_fast_api_server()
 # cosmos_client = CosmosClientBuilder()
 
 def get_model():
-    config = omegaconf.OmegaConf.load("../lbh_measure/conf.yml")
+    config = omegaconf.OmegaConf.load("./conf.yml")
     config.model_path = constants.ML_MODEL_PATH
 
     use_cuda = torch.cuda.is_available()
