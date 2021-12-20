@@ -1,3 +1,3 @@
 #!/bin/bash
-pip install ..
+pip install .
 uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
