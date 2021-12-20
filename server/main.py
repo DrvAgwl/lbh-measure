@@ -12,6 +12,8 @@ from lbh_measure.utils.request_types import PredictVolumeFields
 from lbh_measure.utils import constants
 
 app = create_fast_api_server()
+
+
 # cosmos_client = CosmosClientBuilder()
 
 def get_model():
@@ -23,7 +25,10 @@ def get_model():
 
     model = load_model(config)
     model = model.to(device)
-    return model
+    return model, device
+
+
+model, device = get_model()
 
 
 @app.get("/healthcheck")
