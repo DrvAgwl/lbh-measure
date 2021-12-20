@@ -23,6 +23,7 @@ open3d = "==0.13.0"
 pytorch-lightning = "*"
 websockets = "*"
 torch = "==1.9.0"
+lbh-measure = {path = "."}
 
 [dev-packages]
 

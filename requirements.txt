@@ -99,3 +99,5 @@ werkzeug==2.0.2; python_version >= '3.6'
 wheel==0.36.2; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'
 yarl==1.7.2; python_version >= '3.6'
 zipp==3.6.0; python_version >= '3.6'
+git+https://github.com/udaan-com/lbh-measure-python-service
+git+https://github.com/udaan-com/udaan-py-common.git@2bbde409c8ea7020624d83a274f877982cbf91f6#egg=udaan-py-common
