@@ -25,7 +25,7 @@ def get_model(model_type):
 
     if model_type == 'onnx':
         import onnxruntime as ort
-        model = ort.InferenceSession('/tmp/test.onnx')
+        model = ort.InferenceSession(config.model_path)
     else:
         model = load_model(config)
         model = model.to(device)
