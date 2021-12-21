@@ -28,6 +28,7 @@ jobs:
       BUILDAH_FORMAT: docker
       MAVEN_OPTS: -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -DinstallAtEnd=true -DdeployAtEnd=true
       MAVEN_CLI_OPTS: -U -B -e -fae -V
+      BASE_IMAGE: udaan.azurecr.io/python3-jdk8:3.9.9
     steps:
       - name: Notify slack Starting
         if: success()
