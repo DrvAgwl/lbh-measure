@@ -165,3 +165,4 @@ yapf==0.31.0
 yarl==1.7.2; python_version >= '3.6'
 ytsphinx==1.2.1.dev20200430
 zipp==3.6.0; python_version >= '3.6'
+onnxruntime
