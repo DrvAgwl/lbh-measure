@@ -9,8 +9,8 @@ server:
     - type: http
       port: 8000
 kubernetes:
-  cpus: 4
-  mem: 6112
+  cpus: 10
+  mem: 10000
   workload: general
   healthcheck: default
   strategyType: Recreate
