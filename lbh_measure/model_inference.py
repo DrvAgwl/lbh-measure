@@ -9,10 +9,10 @@ import torch
 from .data import BagDataset
 from .model_builder import ModelBuilder
 from .utils.util import get_colors
+from . import invoke_model
 
 
-def color_pcd(pred, pcd):
-    pred_np = pred
+def color_pcd(pred_np, pcd):
     pred_colors = np.zeros((pred_np.shape[0], 3))
     sem_seg_colors = get_colors()
     for index in range(pred_np.shape[0]):
@@ -24,8 +24,7 @@ def color_pcd(pred, pcd):
     return predicted_pcd
 
 
-
-def main(pcd, model, device, vis=False, file_name=""):
+def main(pcd, model, device, vis=False, file_name="", model_type='torch'):
     pcd_points, pcd_colors, pcd_normals = BagDataset.get_np_points(pcd)
 
     # The shape #points, 9 (3-xyz, 3-rgb, 3-normals)
@@ -37,11 +36,20 @@ def main(pcd, model, device, vis=False, file_name=""):
         print("Could not find colors")
         pass
 
-    input_tensor = input_tensor.permute(0, 2, 1)
-    pred = model(input_tensor)
-    pred_all = pred.permute(0, 2, 1).contiguous()
-    pred = pred_all.max(dim=2)[1]
-    pred = pred.cpu().detach().numpy()[0]
+    if model_type == 'torch':
+        input_tensor = invoke_model.prepare_input(pcd_points, pcd_colors, 'tensor')
+        pred = invoke_model.invoke_torch_model(model, input_tensor)
+        pred = pred.permute(0, 2, 1).contiguous()
+        pred = pred.argmax(dim=2).cpu().detach().numpy()[0]
+        # pred = pred.cpu().detach().numpy()[0]
+    elif model_type == 'onnx':
+        input_array = invoke_model.prepare_input(pcd_points, pcd_colors, 'np')
+        pred = invoke_model.invoke_onnx_model(model, input_array)[0]
+        pred = pred.transpose(0, 2, 1)
+        pred = pred.argmax(axis=2)[0]
+    else:
+        raise
+
     predicted_pcd = color_pcd(pred, pcd)
     cl, ind = predicted_pcd.remove_statistical_outlier(nb_neighbors=1, std_ratio=1.0)
     predicted_pcd.select_by_index(ind)
@@ -108,6 +116,7 @@ def remove_background(pcd):
         if k > 2:
             selected_points.append(point_index)
     return cropped_pcd.select_by_index(selected_points)
+
 
 def download_file(url, base_path):
     local_filename = url.split("/")[-1]
