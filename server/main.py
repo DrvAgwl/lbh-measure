@@ -1,6 +1,6 @@
 import omegaconf
 import torch
-import uvicorn
+from fastapi import HTTPException
 from udaan_common.logging import logger
 from udaan_common.server import create_fast_api_server
 from udaan_common.resources.cosmos.cosmos_client_builder import CosmosClientBuilder
@@ -34,8 +34,8 @@ def get_model(model_type):
     return model, device
 
 
-model, device = get_model(model_type='onnx')
-# model, device = get_model(model_type='torch')
+# model, device = get_model(model_type='onnx')
+model, device = get_model(model_type='torch')
 
 
 @app.get("/healthcheck")
@@ -50,8 +50,8 @@ def predict(fields: PredictVolumeFields):
     bag_url = fields.bag_url
     sku_id = fields.sku_id
 
-    key = "id"
-    value = fields.id
+    key = "status"
+    value = "not set"
     query = f"SELECT * FROM r WHERE r.{key}=@{key}"
     parameters = [{"name": f"@{key}", "value": value}]
     enable_cross_partition_query = True
@@ -59,14 +59,11 @@ def predict(fields: PredictVolumeFields):
     # doc = [i for i in cosmos_client.read_items(query, parameters, enable_cross_partition_query)][-1]
     bag_file_path = download_file(bag_url, "/tmp/test_bag_files/")
     pcd = ConvertToPCD(topic_names=["filtered"]).get_pcd(bag_file_path)
-    # vol, width, height, depth = main(pcd, model, device, False, bag_file_path, model_type='torch')
-    vol, width, height, depth = main(pcd, model, device, False, bag_file_path, model_type='onnx')
+    if not pcd:
+        raise HTTPException(status_code=415, detail="The given bag file does not have the topic `filtered`")
+    vol, width, height, depth = main(pcd, model, device, False, bag_file_path, model_type='torch')
+    # vol, width, height, depth = main(pcd, model, device, False, bag_file_path, model_type='onnx')
     doc.update({"volume": vol,
                 "width": width, "height": height, "depth": depth,
                 "bag_url": bag_url, "sku_id": sku_id})
     return doc
-
-
-if __name__ == "__main__":
-    # Starting Service
-    uvicorn.run(app, host="0.0.0.0", port=5555)

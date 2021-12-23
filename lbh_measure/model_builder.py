@@ -7,9 +7,9 @@ from torchmetrics.functional import accuracy, iou, dice_score
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
-from .data import BagDataset
-from .model import DGCNN_semseg
-from .utils.util import collate_fn_pad
+from lbh_measure.data import BagDataset
+from lbh_measure.model import DGCNN_semseg
+from lbh_measure.utils.util import collate_fn_pad
 
 
 class ModelBuilder(pl.LightningModule):
@@ -21,22 +21,24 @@ class ModelBuilder(pl.LightningModule):
 
     def train_dataloader(self):
         train_loader = DataLoader(
-            BagDataset(self.config.pcd_dir, self.config.train_data, partition="train", set_normals=False),
+            BagDataset(self.config.pcd_dir, self.config.train_data,
+                       set_normals=False, downsample_factor=self.config.get('downsample_factor', 0)),
             num_workers=self.config.num_workers,
-            pin_memory=True,
+            pin_memory=self.config.get('pin_memory', False),
             batch_size=self.config.batch_size,
-            drop_last=True,
+            drop_last=self.config.get('drop_last', False),
             collate_fn=collate_fn_pad
         )
         return train_loader
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            BagDataset(self.config.pcd_dir, self.config.test_data, partition="test", set_normals=False),
+            BagDataset(self.config.pcd_dir, self.config.test_data,
+                       set_normals=False, downsample_factor=self.config.get('downsample_factor', 0)),
             num_workers=self.config.num_workers,
-            pin_memory=True,
+            pin_memory=self.config.get('pin_memory', False),
             batch_size=self.config.test_batch_size,
-            drop_last=True,
+            drop_last=self.config.get('drop_last', False),
             collate_fn=collate_fn_pad
         )
 
@@ -46,13 +48,14 @@ class ModelBuilder(pl.LightningModule):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
 
-        seg_pred = self(input_tensor)
+        seg_pred = self.forward(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
         pred = seg_pred.softmax(1)  # .max(dim=2)[1]
         loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
 
         pred = pred.argmax(-1)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True,
+                 logger=True, batch_size=self.config.batch_size)
         output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
 
@@ -60,13 +63,14 @@ class ModelBuilder(pl.LightningModule):
         input_tensor, seg = batch[0], batch[1]
         input_tensor = input_tensor.permute(0, 2, 1)
 
-        seg_pred = self(input_tensor)
+        seg_pred = self.forward(input_tensor)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
         pred = seg_pred.softmax(1)  # .max(dim=2)[1]
         loss = self.compute_loss(seg_pred.view(-1, 2), seg.view(-1, 1).squeeze())
 
         pred = pred.argmax(-1)
-        self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("validation_loss", loss, on_step=True, on_epoch=True, prog_bar=True,
+                 logger=True, batch_size=self.config.test_batch_size)
         output = {"loss": loss, "pred": pred.detach(), "seg": seg.detach()}
         return output
 

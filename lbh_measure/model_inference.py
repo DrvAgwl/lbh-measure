@@ -5,11 +5,18 @@ import numpy as np
 import open3d as o3d
 import requests
 import torch
+from omegaconf import OmegaConf
+import pandas as pd
+import argparse
+from glob import glob
+from tqdm import tqdm
+from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
 
-from .data import BagDataset
-from .model_builder import ModelBuilder
-from .utils.util import get_colors
-from . import invoke_model
+from lbh_measure.data import BagDataset
+from lbh_measure.model_builder import ModelBuilder
+
+from lbh_measure.utils.util import get_colors
+from lbh_measure import invoke_model
 
 
 def color_pcd(pred_np, pcd):
@@ -23,34 +30,10 @@ def color_pcd(pred_np, pcd):
     predicted_pcd.colors = o3d.utility.Vector3dVector(pred_colors / 255.0)
     return predicted_pcd
 
-
-def main(pcd, model, device, vis=False, file_name="", model_type='torch'):
-    pcd_points, pcd_colors, pcd_normals = BagDataset.get_np_points(pcd)
-
-    # The shape #points, 9 (3-xyz, 3-rgb, 3-normals)
-    input_tensor = torch.zeros((1, pcd_points.shape[0], 9)).to(device)
-    input_tensor[0, :, 0:3] = torch.tensor(pcd_points)
-    try:
-        input_tensor[0, :, 3:6] = torch.tensor(pcd_colors)
-    except RuntimeError:
-        print("Could not find colors")
-        pass
-
-    if model_type == 'torch':
-        input_tensor = invoke_model.prepare_input(pcd_points, pcd_colors, 'tensor')
-        pred = invoke_model.invoke_torch_model(model, input_tensor)
-        pred = pred.permute(0, 2, 1).contiguous()
-        pred = pred.argmax(dim=2).cpu().detach().numpy()[0]
-        # pred = pred.cpu().detach().numpy()[0]
-    elif model_type == 'onnx':
-        input_array = invoke_model.prepare_input(pcd_points, pcd_colors, 'np')
-        pred = invoke_model.invoke_onnx_model(model, input_array)[0]
-        pred = pred.transpose(0, 2, 1)
-        pred = pred.argmax(axis=2)[0]
-    else:
-        raise
-
+def post_process(pred, pcd):
+    # Post Processing
     predicted_pcd = color_pcd(pred, pcd)
+    # predicted_pcd = pcd
     cl, ind = predicted_pcd.remove_statistical_outlier(nb_neighbors=1, std_ratio=1.0)
     predicted_pcd.select_by_index(ind)
 
@@ -75,6 +58,27 @@ def main(pcd, model, device, vis=False, file_name="", model_type='torch'):
         if k > 2:
             selected_points.append(point_index)
     box_filtered = box_filtered.select_by_index(selected_points)
+    return box_filtered, predicted_pcd
+
+
+def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
+    pcd_points, pcd_colors, pcd_normals = BagDataset.get_np_points(pcd)
+
+    if model_type == 'torch':
+        input_tensor = BagDataset.prepare_input(pcd_points, pcd_colors, 'tensor', add_batch=True)
+        pred = invoke_model.invoke_torch_model(model, input_tensor)
+        pred = pred.permute(0, 2, 1).contiguous()
+        pred = pred.argmax(dim=2).cpu().detach().numpy()[0]
+        # pred = pred.cpu().detach().numpy()[0]
+    elif model_type == 'onnx':
+        input_array = BagDataset.prepare_input(pcd_points, pcd_colors, 'np', add_batch=True)
+        pred = invoke_model.invoke_onnx_model(model, input_array)[0]
+        pred = pred.transpose(0, 2, 1)
+        pred = pred.argmax(axis=2)[0]
+    else:
+        raise
+
+    box_filtered, predicted_pcd = post_process(pred, pcd)
 
     try:
         hull, _ = box_filtered.compute_convex_hull()
@@ -83,6 +87,7 @@ def main(pcd, model, device, vis=False, file_name="", model_type='torch'):
         lineset = o3d.geometry.LineSet.create_from_triangle_mesh(hull)
         if vis:
             points = np.array(predicted_pcd.points)
+            threshold = 0.01
             floor_removed = predicted_pcd.select_by_index(np.where(points[:, 2] > threshold)[0])
             pred_t_lineset = copy.deepcopy(floor_removed).translate((1.5, 0, 0))
             lineset_t = copy.deepcopy(lineset).translate((1.5, 0, 0))
@@ -137,3 +142,73 @@ def download_file(url, base_path):
 def load_model(config):
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
     return model
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Convert from rosbag to pcd")
+    parser.add_argument("--input_dir", type=str, default=None, help="Input directory with annotation files")
+    parser.add_argument("--bag_id", type=str, required=True, help="Input directory with annotation files")
+    parser.add_argument(
+        "--vis", type=bool, required=True, help="Path to the training config with the hyperparams"
+    )
+
+    args = parser.parse_args()
+
+    if args.input_dir:
+        input_files = glob(f'{args.input_dir}/*.bag')
+    else:
+        url = '{}/{}.bag'.format(
+            # 'https://ud-dev-cdn.azureedge.net/tcprofilerimages/', args.bag_id)
+            # 'https://udprodstore.blob.core.windows.net/tcprofilerimages/', args.bag_id)
+            "https://udprodstore.blob.core.windows.net/tcprofilerimages", args.bag_id)
+        path_to_pcd = download_file(
+            url, base_path='/Users/nikhil.k/data/dev/lbh/tc_data/25_11/')
+        input_files = glob(f"/Users/nikhil.k/data/dev/lbh/tc_data/25_11/{args.bag_id}.bag")
+
+    config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
+    config.k = 20
+    # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/mlflow_best.ckpt"
+    # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/epoch=141-step=1561.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
+    config.model_path = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
+    model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
+    model.eval()
+    # import onnxruntime as ort
+    # ML_MODEL_PATH =
+    # model = ort.InferenceSession("/tmp/test.onnx")
+
+    convert_to_pcd = ConvertToPCD(topic_names=['filtered'])
+
+    output = []
+    for i in tqdm(input_files):
+        out = {}
+        print("Converting file: {}".format(i))
+        file_name = i.split("/")[-1].split('.')[0]
+        # if not file_name == 'SGE00J3JXMN1GR001S':
+        # continue
+        pcd = convert_to_pcd.get_pcd(i)
+
+        if pcd is None:
+            print("Skipping {} Bag Unindexed bag file".format(file_name))
+            continue
+        # pcd = remove_background(pcd)
+        # o3d.visualization.draw_geometries([pcd], window_name='')
+        # o3d.visualization.draw_geometries([pcd.voxel_down_sample(0.01)], window_name='')
+        pcd = pcd.voxel_down_sample(0.01)
+        # continue
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
+        # vol, width, height, depth = main(pcd, model, device, True, file_name, 'onnx')
+        vol, width, height, depth = main(pcd, model, device, True, file_name)
+        out['file_name'] = file_name
+        out['computed_vol'] = vol
+        out['width'] = width
+        out['height'] = height
+        out['depth'] = depth
+        output.append(out)
+
+    out_df = pd.DataFrame(output)
+    print(out_df.to_markdown())
+    out_df.to_csv('~/Desktop/model_output.csv')

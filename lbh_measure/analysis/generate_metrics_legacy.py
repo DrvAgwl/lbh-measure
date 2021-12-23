@@ -5,7 +5,6 @@ import os
 import copy
 from glob import glob
 
-
 import numpy as np
 import pandas as pd
 import open3d as o3d
@@ -15,10 +14,11 @@ from tqdm import tqdm
 import sklearn.metrics as metrics
 import matplotlib.pyplot as plt
 import matplotlib
+
 matplotlib.use('TkAgg')
 
-from model_builder import ModelBuilder
-from data import BagDataset
+from lbh_measure.model_builder import ModelBuilder
+from lbh_measure.data import BagDataset
 
 
 # def load_model(config):
@@ -45,9 +45,10 @@ def calculate_sem_IoU(pred_np, seg_np, visual=False):
                 if U_all[sem] == 0:
                     I_all[sem] = 1
                     U_all[sem] = 1
-        IoUs.append(I_all / U_all )
+        IoUs.append(I_all / U_all)
     IoUs = np.array(IoUs)
     return IoUs.mean()
+
 
 def validate_model(test_file, config, model, measured_df, output_dir):
     metrics_dict = {}
@@ -55,10 +56,10 @@ def validate_model(test_file, config, model, measured_df, output_dir):
 
     roi_pcd, ob_roi = BagDataset.crop_volume(overall_pcd, parsed_data['roi'])
     box_pcd, ob_box = BagDataset.crop_volume(overall_pcd, parsed_data['box'])
-    
+
     roi_points, roi_colors, roi_normals = BagDataset.get_np_points(roi_pcd)
     box_points, box_colors, box_normals = BagDataset.get_np_points(box_pcd)
-    
+
     labels_one_hot = BagDataset.get_labels(box_points, roi_points).unsqueeze(0)
     # The shape #points, 9 (3-xyz, 3-rgb, 3-normals)
     input_tensor = torch.zeros((1, 9, roi_points.shape[0]))
@@ -66,30 +67,29 @@ def validate_model(test_file, config, model, measured_df, output_dir):
     input_tensor[0, 3:6, :] = torch.tensor(roi_colors.transpose())
     if config.get("set_normals"):
         input_tensor[0, 6:9, :] = torch.tensor(roi_normals.transpose())
-    
+
     pred = model(input_tensor)
     pred_all = pred.permute(0, 2, 1).contiguous()
     pred = pred_all.max(dim=2)[1]
-    
+
     metrics_dict['pred'] = pred_all.squeeze(0).detach().cpu().numpy()
     metrics_dict['gt'] = labels_one_hot.squeeze(0)
-    
-    pred_np = pred.detach().cpu().numpy()    
+
+    pred_np = pred.detach().cpu().numpy()
     seg_np = labels_one_hot.detach().numpy()
 
-  
     avg_per_class_acc = metrics.balanced_accuracy_score(pred_np.reshape(-1), seg_np.reshape(-1))
     metrics_dict['avg_per_class'] = avg_per_class_acc
     test_ious = calculate_sem_IoU([pred_np], [seg_np])
     metrics_dict['iou'] = test_ious
-    pred_box_coords = input_tensor[:, :, np.where(pred_np==1)[1]].permute(0, 2, 1)[0, :, :3].detach().numpy()
-    box = roi_pcd.select_by_index(np.where(pred==1)[1])
+    pred_box_coords = input_tensor[:, :, np.where(pred_np == 1)[1]].permute(0, 2, 1)[0, :, :3].detach().numpy()
+    box = roi_pcd.select_by_index(np.where(pred == 1)[1])
     box_p = np.array(box.points)
-    box = box.select_by_index(np.where(box_p[:, 2]>0)[0])
-    
+    box = box.select_by_index(np.where(box_p[:, 2] > 0)[0])
+
     hull, _ = box.compute_convex_hull()
     hull.orient_triangles()
-    
+
     try:
         pred_volume = hull.get_volume()
         metrics_dict['pred_vol'] = pred_volume
@@ -100,9 +100,9 @@ def validate_model(test_file, config, model, measured_df, output_dir):
     # vec_pred_box_coords = o3d.utility.Vector3dVector(pred_box_coords)
     # pred_volume = o3d.geometry.OrientedBoundingBox().create_from_points(vec_pred_box_coords).volume()
     index_number = test_file.split('/')[-1].split("_")[0]
-    print("index_number----> ",index_number)
+    print("index_number----> ", index_number)
     metrics_dict['index'] = index_number
-    measured_volume = measured_df[measured_df['index']==index_number]['Volume_measured'].values[0]
+    measured_volume = measured_df[measured_df['index'] == index_number]['Volume_measured'].values[0]
     metrics_dict['gt_vol'] = measured_volume
     metrics_dict['pred_vol_box'] = box_pcd.get_oriented_bounding_box().volume()
     out_string = (
@@ -120,6 +120,7 @@ def validate_model(test_file, config, model, measured_df, output_dir):
     #                                                                                     np.mean(test_ious))
     return metrics_dict
 
+
 def calculate_test_metrics(metrics_df):
     pred, seg = metrics_df['pred'].values, metrics_df['gt'].values
     pred_tensor = torch.tensor([])
@@ -133,7 +134,7 @@ def calculate_test_metrics(metrics_df):
     # pred = torch.tensor(pred_np)
     # seg = torch.tensor(seg_np)
     # average_precision = metrics.average_precision_score(pred, seg)
-    
+
     print(pred_tensor.shape, seg_tensor.shape)
     from torchmetrics import PrecisionRecallCurve
     pr_curve = PrecisionRecallCurve(num_classes=2)
@@ -142,7 +143,7 @@ def calculate_test_metrics(metrics_df):
     # print(precision, recall, thresholds)
     # disp = metrics.PrecisionRecallDisplay(precision=precision[1].detach().numpy(), recall=recall[1].detach().numpy())
     # plt.plot()
-    
+
     plt.figure()
     plt.step(recall[1], precision[1], where='post')
     plt.xlabel('Recall')
@@ -150,6 +151,7 @@ def calculate_test_metrics(metrics_df):
     plt.ylim([0.0, 1.05])
     plt.xlim([0.0, 1.0])
     plt.show()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert from rosbag to pcd")
@@ -175,4 +177,4 @@ if __name__ == "__main__":
         metrics_out.append(validate_model(i, config, model, measured_df, args.output_dir))
     metrics_df = pd.DataFrame(metrics_out)
     metrics_df.to_csv('./metrics.csv')
-    calculate_test_metrics(metrics_df)    
+    calculate_test_metrics(metrics_df)

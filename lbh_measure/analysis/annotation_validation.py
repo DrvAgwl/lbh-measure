@@ -7,7 +7,7 @@ import open3d as o3d
 from glob import glob
 
 
-class ValidateAnnotation:
+class AnnotationValidation:
     """
     Annotation Directory Structure
     Base
@@ -91,5 +91,5 @@ if __name__ == "__main__":
                         help="Directory with multiple user annotation files")
     parser.add_argument("--input_pcd_dir", type=str, required=True, help="Directory with Point Cloud files")
     args = parser.parse_args()
-    validate_annos = ValidateAnnotation(args.annotation_dir, args.input_pcd_dir)
+    validate_annos = AnnotationValidation(args.annotation_dir, args.input_pcd_dir)
     validate_annos.validate_annotation()

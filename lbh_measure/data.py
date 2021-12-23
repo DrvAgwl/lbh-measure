@@ -14,12 +14,15 @@ from torch.utils.data import Dataset
 
 
 class BagDataset(Dataset):
-    def __init__(self, pcd_dir, label_directory, partition='train', set_normals=False) -> None:
+    def __init__(self, pcd_dir, label_directory, output_type='tensor',
+                 set_normals=False, downsample_factor=0) -> None:
         super().__init__()
         self.pcd_dir = pcd_dir
         self.label_dir = label_directory
         self.labels = glob.glob(label_directory + "/*")
         self.set_normals = set_normals
+        self.downsample_factor = downsample_factor
+        self.output_type = output_type
 
     @staticmethod
     def crop_volume(pcd, data, type_):
@@ -48,7 +51,7 @@ class BagDataset(Dataset):
         extent = np.array([dimensions["length"], dimensions["width"],
                            dimensions["height"]], dtype=np.float64)
         if type_ == 'cart':
-            extent = extent + extent * 0.2
+            extent = extent - extent * 0.2
         ob = o3d.geometry.OrientedBoundingBox(center, R, extent)
 
         point_cloud_crop = pcd.crop(ob)
@@ -109,31 +112,60 @@ class BagDataset(Dataset):
         labels_one_hot = torch.Tensor(labels_one_hot).type(torch.int64)
         return labels_one_hot
 
+    @staticmethod
+    def prepare_input(pcd_points, pcd_colors, output_type='tensor', add_batch=False):
+        input_shape = (pcd_points.shape[0], 6)
+
+        if output_type == 'tensor':
+            input_tensor = torch.zeros(input_shape)
+            input_tensor[:, 0:3] = torch.tensor(pcd_points)
+            try:
+                input_tensor[:, 3:6] = torch.tensor(pcd_colors)
+            except RuntimeError:
+                print("Could not find colors")
+                pass
+            if add_batch:
+                return input_tensor.unsqueeze(0)
+            return input_tensor
+        elif output_type == 'np':
+            input_array = np.zeros(input_shape)
+            input_array[0, :, 0:3] = pcd_points
+            try:
+                input_array[0, :, 3:6] = pcd_colors
+            except RuntimeError:
+                print("Could not find colors")
+                pass
+            if add_batch:
+                return np.expand_dims(input_array, 0)
+            return input_array
+        else:
+            raise InputTypeNotFoundException(
+                f'The give input type {output_type} is not found. Only allowed - tensor, np'
+            )
+
     def __getitem__(self, index):  # -> tuple(torch.tensor, torch.tensor):
         file_name = self.labels[index]
 
         parsed_data, pcd = self.parse_data(self, file_name)
+        pcd = pcd.voxel_down_sample(self.downsample_factor)
 
         box_pcd, ob_box = self.crop_volume(pcd, parsed_data['cart'], 'cart')
 
         all_points, all_colors, all_normals = self.get_np_points(pcd)
         box_points, box_colors, box_normals = self.get_np_points(box_pcd)
-        
-#         threshold = 0.01
-#         roi_pcd = roi_pcd.select_by_index(np.where(all_points[:, 2]>threshold)[0])
-#         box_pcd = box_pcd.select_by_index(np.where(box_points[:, 2]>threshold)[0])
-        
-#         all_points, roi_colors, roi_normals = self.get_np_points(roi_pcd)
-#         box_points, box_colors, box_normals = self.get_np_points(box_pcd)
-        
-        labels_one_hot = self.get_labels(box_points, all_points)
-        # The shape #points, 9 (3-xyz, 3-rgb, 3-normals)
-        input_tensor = torch.zeros((all_points.shape[0], 9))
-        input_tensor[:, 0:3] = torch.tensor(all_points)
-        input_tensor[:, 3:6] = torch.tensor(all_colors)
-        if self.set_normals:
-            input_tensor[:, 6:9] = torch.tensor(box_normals)
 
+        input_tensor = self.prepare_input(
+            pcd_points=all_points, pcd_colors=all_colors, output_type=self.output_type
+        )
+
+        #         threshold = 0.01
+        #         roi_pcd = roi_pcd.select_by_index(np.where(all_points[:, 2]>threshold)[0])
+        #         box_pcd = box_pcd.select_by_index(np.where(box_points[:, 2]>threshold)[0])
+
+        #         all_points, roi_colors, roi_normals = self.get_np_points(roi_pcd)
+        #         box_points, box_colors, box_normals = self.get_np_points(box_pcd)
+
+        labels_one_hot = self.get_labels(box_points, all_points)
         try:
             return input_tensor, labels_one_hot, input_tensor.shape[0]
         except Exception as e:
@@ -151,11 +183,6 @@ class NoObjectFoundException(Exception):
 class OutOfDistributionLabelException(Exception):
     pass
 
-# if __name__ == '__main__':
-#     train = BagDataset('/Users/nikhil.k/data/dev/lbh/converted-bag/labels/')
-#     # data, label = train[-1]
-#     # print(data.shape)
-#     for i, j in train:
-#         print(i.shape, j.shape)
 
-# COMMAND ----------
+class InputTypeNotFoundException(Exception):
+    pass
