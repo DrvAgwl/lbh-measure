@@ -54,6 +54,16 @@ def post_process(pred, pcd):
 
 
 def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
+    """
+    This the common function for invoking the model for testing.
+    :param pcd (PointCloud): PointCloud data.
+    :param model: The Pytorch/Onnx model
+    :param device: cpu/cuda
+    :param vis:
+    :param file_name:
+    :param model_type:
+    :return:
+    """
     pcd_points, pcd_colors, pcd_normals = BagDataset.get_np_points(pcd)
 
     if model_type == 'torch':

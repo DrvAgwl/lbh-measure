@@ -14,6 +14,10 @@ from torch.utils.data import Dataset
 
 
 class BagDataset(Dataset):
+    """
+    This class is the common interface for all the dataprocessing.
+    The static methods can be used commonly across all workflows.
+    """
     def __init__(self, pcd_dir, label_directory, output_type='tensor',
                  downsample_factor=0, return_pcd=False) -> None:
         super().__init__()
@@ -60,6 +64,11 @@ class BagDataset(Dataset):
 
     @staticmethod
     def get_np_points(pcd):
+        """
+        From the point cloud, return the points
+        :param pcd:
+        :return: points, colors, normals (all np.arrays)
+        """
         points = np.array(pcd.points)
         colors = np.array(pcd.colors)
         pcd.estimate_normals()
@@ -70,6 +79,12 @@ class BagDataset(Dataset):
 
     @staticmethod
     def parse_data(self, file_name):
+        """
+        From the (LabelCloud)[https://github.com/ch-sa/labelCloud] annotated data,
+        this function parses the JSON files to get the PointCloud and the relevant details.
+        :param file_name:
+        :return:
+        """
         with open(file_name) as f:
             data = json.load(f)
 
@@ -114,7 +129,21 @@ class BagDataset(Dataset):
         return labels_one_hot
 
     @staticmethod
-    def prepare_input(pcd_points, pcd_colors, pcd_normals, output_type='tensor', add_batch=False):
+    def prepare_input(pcd_points: np.array,
+                      pcd_colors: np.array,
+                      pcd_normals: np.array,
+                      output_type='tensor', add_batch=False):
+        """
+        This method returns either tensors/np.arrays depending on the output type.
+        Tensors are required while invoking a pytorch model.
+        Np.array is required for Onnx model.
+        :param pcd_points:
+        :param pcd_colors:
+        :param pcd_normals:
+        :param output_type:
+        :param add_batch:
+        :return:
+        """
         input_shape = (pcd_points.shape[0], 9)
 
         if output_type == 'tensor':

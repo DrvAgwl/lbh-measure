@@ -52,7 +52,7 @@ def calculate_sem_IoU(pred_np, seg_np, visual=False):
 
 def validate_model(test_file, config, model, measured_df, output_dir):
     metrics_dict = {}
-    parsed_data, overall_pcd = BagDataset.parse_data(test_file)
+    parsed_data, overall_pcd = BagDataset.parse_data()
 
     roi_pcd, ob_roi = BagDataset.crop_volume(overall_pcd, parsed_data['roi'])
     box_pcd, ob_box = BagDataset.crop_volume(overall_pcd, parsed_data['box'])
