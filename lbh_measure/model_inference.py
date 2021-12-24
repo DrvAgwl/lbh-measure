@@ -30,34 +30,26 @@ def color_pcd(pred_np, pcd):
     predicted_pcd.colors = o3d.utility.Vector3dVector(pred_colors / 255.0)
     return predicted_pcd
 
+
 def post_process(pred, pcd):
     # Post Processing
     predicted_pcd = color_pcd(pred, pcd)
     # predicted_pcd = pcd
-    cl, ind = predicted_pcd.remove_statistical_outlier(nb_neighbors=1, std_ratio=1.0)
-    predicted_pcd.select_by_index(ind)
 
-    from sklearn.neighbors import KNeighborsClassifier
-
-    clf = KNeighborsClassifier(2, weights="distance")
-    clf.fit(np.array(predicted_pcd.points), pred)
-    pred_nn = clf.predict(np.array(predicted_pcd.points))
-
-    predicted_pcd = color_pcd(pred_nn, predicted_pcd)
-
-    threshold = 0.01
-    box = predicted_pcd.select_by_index(np.where(pred_nn == 1)[0])
-    box_p = np.array(box.points)
-
-    box_filtered = box.select_by_index(np.where(box_p[:, 2] > threshold)[0])
-
+    box_filtered = pcd.select_by_index(np.where(pred == 1)[0])
     pcd_tree = o3d.geometry.KDTreeFlann(box_filtered)
     selected_points = []
     for point_index in range(np.array(box_filtered.points).shape[0]):
         [k, idx, _] = pcd_tree.search_radius_vector_3d(box_filtered.points[point_index], 0.015)
-        if k > 2:
+        # [k, idx, _] = pcd_tree.search_knn_vector_3d(box_filtered.points[point_index], 10)
+        if k >= 5:
             selected_points.append(point_index)
     box_filtered = box_filtered.select_by_index(selected_points)
+
+    box_points_index = np.zeros(pred.shape)
+    box_points_index[selected_points] = 1
+    predicted_pcd = color_pcd(box_points_index, pcd)
+
     return box_filtered, predicted_pcd
 
 
@@ -65,13 +57,13 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
     pcd_points, pcd_colors, pcd_normals = BagDataset.get_np_points(pcd)
 
     if model_type == 'torch':
-        input_tensor = BagDataset.prepare_input(pcd_points, pcd_colors, 'tensor', add_batch=True)
+        input_tensor = BagDataset.prepare_input(pcd_points, pcd_colors, pcd_normals, 'tensor', add_batch=True)
         pred = invoke_model.invoke_torch_model(model, input_tensor)
         pred = pred.permute(0, 2, 1).contiguous()
         pred = pred.argmax(dim=2).cpu().detach().numpy()[0]
         # pred = pred.cpu().detach().numpy()[0]
     elif model_type == 'onnx':
-        input_array = BagDataset.prepare_input(pcd_points, pcd_colors, 'np', add_batch=True)
+        input_array = BagDataset.prepare_input(pcd_points, pcd_colors, pcd_normals, 'np', add_batch=True)
         pred = invoke_model.invoke_onnx_model(model, input_array)[0]
         pred = pred.transpose(0, 2, 1)
         pred = pred.argmax(axis=2)[0]
@@ -85,6 +77,12 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
         hull.orient_triangles()
         hull.compute_vertex_normals()
         lineset = o3d.geometry.LineSet.create_from_triangle_mesh(hull)
+        try:
+            hull_vol = hull.get_volume()
+        except RuntimeError as e:
+            hull_vol = None
+            pass
+
         if vis:
             points = np.array(predicted_pcd.points)
             threshold = 0.01
@@ -93,20 +91,17 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
             lineset_t = copy.deepcopy(lineset).translate((1.5, 0, 0))
             o3d.visualization.draw_geometries([pcd, pred_t_lineset, lineset_t], window_name=file_name)
     except RuntimeError as e:
+        hull_vol = None
         # pred_t_lineset = copy.deepcopy(box).translate((1.5, 0, 0))
         # o3d.visualization.draw_geometries([pred_t_lineset], window_name='')
         print("Could not calculate volume")
+        print(e)
 
     h, w, d = box_filtered.get_max_bound() - box_filtered.get_min_bound()
-    try:
-        hull_vol = hull.get_volume()
-        print(hull_vol, w, h, d)
-        return hull_vol, w, h, d
-    except RuntimeError as e:
-        print("Could not create a water tight mesh")
-        print(e)
+    if not hull_vol:
         hull_vol = w * h * d
-        return hull_vol, w, h, d
+    print(hull_vol, w, h, d)
+    return hull_vol, w, h, d, predicted_pcd
 
 
 def remove_background(pcd):

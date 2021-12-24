@@ -4,7 +4,8 @@
 # ML_MODEL_PATH = "/models/hardware/v0/epoch=15-step=79.ckpt"
 # ML_MODEL_PATH = "/models/hardware/v0/test.onnx"
 # ML_MODEL_PATH = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
-ML_MODEL_PATH = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
+# ML_MODEL_PATH = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
+ML_MODEL_PATH = "/Users/nikhil.k/epoch=17-step=539.ckpt"
 # ML_MODEL_PATH = "/tmp/test.onnx"
 COSMOS_DATABASE_NAME = 'measure'
 COSMOS_CONTAINER_NAME = 'audit'

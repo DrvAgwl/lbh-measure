@@ -9,7 +9,7 @@ pcd_dir: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/converted_pcd_no
 train_data: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/labels'
 test_data: '/Users/nikhil.k/data/dev/lbh/udaan-measure/annotation/labels'
 #test_data: '/Users/nikhil.k/data/dev/lbh/converted-bag/labels/test_labels'
-model_path: '/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt'
+model_path: "/Users/nikhil.k/epoch=17-step=539.ckpt"
 embs: 1024
 dropout: 0.5
 emb_dims: 1024

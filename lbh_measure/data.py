@@ -15,14 +15,14 @@ from torch.utils.data import Dataset
 
 class BagDataset(Dataset):
     def __init__(self, pcd_dir, label_directory, output_type='tensor',
-                 set_normals=False, downsample_factor=0) -> None:
+                 downsample_factor=0, return_pcd=False) -> None:
         super().__init__()
         self.pcd_dir = pcd_dir
         self.label_dir = label_directory
         self.labels = glob.glob(label_directory + "/*")
-        self.set_normals = set_normals
         self.downsample_factor = downsample_factor
         self.output_type = output_type
+        self.return_pcd = return_pcd
 
     @staticmethod
     def crop_volume(pcd, data, type_):
@@ -51,10 +51,11 @@ class BagDataset(Dataset):
         extent = np.array([dimensions["length"], dimensions["width"],
                            dimensions["height"]], dtype=np.float64)
         if type_ == 'cart':
-            extent = extent - extent * 0.2
+            extent[-1] = extent[-1] + extent[-1] * 0.2
         ob = o3d.geometry.OrientedBoundingBox(center, R, extent)
 
         point_cloud_crop = pcd.crop(ob)
+        o3d.visualization.draw_geometries([pcd, ob])
         return point_cloud_crop, ob
 
     @staticmethod
@@ -113,8 +114,8 @@ class BagDataset(Dataset):
         return labels_one_hot
 
     @staticmethod
-    def prepare_input(pcd_points, pcd_colors, output_type='tensor', add_batch=False):
-        input_shape = (pcd_points.shape[0], 6)
+    def prepare_input(pcd_points, pcd_colors, pcd_normals, output_type='tensor', add_batch=False):
+        input_shape = (pcd_points.shape[0], 9)
 
         if output_type == 'tensor':
             input_tensor = torch.zeros(input_shape)
@@ -124,9 +125,16 @@ class BagDataset(Dataset):
             except RuntimeError:
                 print("Could not find colors")
                 pass
+            try:
+                input_tensor[:, 6:9] = torch.tensor(pcd_normals)
+            except RuntimeError:
+                print("Could not find normals")
+                pass
+
             if add_batch:
                 return input_tensor.unsqueeze(0)
             return input_tensor
+
         elif output_type == 'np':
             input_array = np.zeros(input_shape)
             input_array[0, :, 0:3] = pcd_points
@@ -135,6 +143,12 @@ class BagDataset(Dataset):
             except RuntimeError:
                 print("Could not find colors")
                 pass
+            try:
+                input_array[0, :, 6:] = pcd_normals
+            except RuntimeError:
+                print("Could not find colors")
+                pass
+
             if add_batch:
                 return np.expand_dims(input_array, 0)
             return input_array
@@ -155,7 +169,8 @@ class BagDataset(Dataset):
         box_points, box_colors, box_normals = self.get_np_points(box_pcd)
 
         input_tensor = self.prepare_input(
-            pcd_points=all_points, pcd_colors=all_colors, output_type=self.output_type
+            pcd_points=all_points, pcd_colors=all_colors, pcd_normals=all_normals,
+            output_type=self.output_type
         )
 
         #         threshold = 0.01
@@ -167,6 +182,8 @@ class BagDataset(Dataset):
 
         labels_one_hot = self.get_labels(box_points, all_points)
         try:
+            if self.return_pcd:
+                return input_tensor, labels_one_hot, input_tensor.shape[0], box_pcd
             return input_tensor, labels_one_hot, input_tensor.shape[0]
         except Exception as e:
             print('FILE NAME---->', file_name)

@@ -50,7 +50,6 @@ def generate_vis(pred, predicted_pcd, threshold=0.01):
     # box_t = copy.deepcopy(box).translate((3.5, 0, 0))
     pred_t_lineset = copy.deepcopy(x).translate((4.5, 0, 0))
     lineset_t = copy.deepcopy(lineset).translate((4.5, 0, 0))
-    # o3d.visualization.draw_geometries([pcd_t, pred_t, box_t, pred_t_lineset, lineset_t, x], window_name='')
     o3d.visualization.draw_geometries([pred_t_lineset, lineset_t], window_name='')
     # o3d.visualization.draw_geometries([pred_t], window_name='')
     # return x
