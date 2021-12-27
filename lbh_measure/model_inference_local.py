@@ -155,11 +155,12 @@ if __name__ == "__main__":
 
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
     config.k = 9
-    config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
+    config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
 
 
-    convert_to_pcd = ConvertToPCD(topic_names=['/merged'])
+    convert_to_pcd = ConvertToPCD(topic_names=['filtered'])
     
     output = []
     for i in tqdm(input_files):

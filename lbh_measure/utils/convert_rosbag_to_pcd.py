@@ -4,11 +4,11 @@ import os
 import struct
 from glob import glob
 
-from tqdm import tqdm
 import numpy as np
 import open3d as o3d
 import rosbag
 import sensor_msgs.point_cloud2 as pc2
+from tqdm import tqdm
 
 
 class ConvertToPCD():
@@ -17,8 +17,9 @@ class ConvertToPCD():
     It will be stored as a open3d PointCloud object.
     """
 
-    def __init__(self, topic_names=['/camera_2/depth/color/points']) -> None:
+    def __init__(self, topic_names: list = ['/camera_2/depth/color/points'], logger=None) -> None:
         self.topic_names = topic_names
+        self.logger = logger
 
     def get_pcd(self, input_file):
         print("Converting file: {}".format(input_file))
@@ -28,7 +29,7 @@ class ConvertToPCD():
             bag = rosbag.Bag(input_file)
         except rosbag.bag.ROSBagUnindexedException as e:
             print(e)
-            print("Unindexed Bag file: {}".format(input))
+            self.logger.error("Unindexed Bag file: {}".format(input))
             return None
 
         try:
@@ -38,7 +39,7 @@ class ConvertToPCD():
                 pcd = self.parse_gen(gen)
             return pcd
         except Exception as e:
-            print("Could not read the topic - /merged")
+            self.logger.error("Could not read the topic - {}".format(topic))
             raise e
 
     def parse_gen(self, gen):

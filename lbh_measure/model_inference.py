@@ -53,7 +53,7 @@ def post_process(pred, pcd):
     return box_filtered, predicted_pcd
 
 
-def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
+def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch', debug_output=False):
     """
     This the common function for invoking the model for testing.
     :param pcd (PointCloud): PointCloud data.
@@ -110,8 +110,10 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch'):
     h, w, d = box_filtered.get_max_bound() - box_filtered.get_min_bound()
     if not hull_vol:
         hull_vol = w * h * d
-    print(hull_vol, w, h, d)
-    return hull_vol, w, h, d, predicted_pcd
+    if debug_output:
+        return hull_vol, w, h, d, predicted_pcd, box_filtered
+    else:
+        return hull_vol, w, h, d
 
 
 def remove_background(pcd):
@@ -128,20 +130,24 @@ def remove_background(pcd):
     return cropped_pcd.select_by_index(selected_points)
 
 
-def download_file(url, base_path):
+def download_file(url, base_path, logger):
     local_filename = url.split("/")[-1]
     # NOTE the stream=True parameter below
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        os.makedirs(base_path, exist_ok=True)
-        path = os.path.join(base_path, local_filename)
-        with open(path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                # If you have chunk encoded response uncomment if
-                # and set chunk_size parameter to None.
-                # if chunk:
-                f.write(chunk)
-    return path
+    try:
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            os.makedirs(base_path, exist_ok=True)
+            path = os.path.join(base_path, local_filename)
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    # If you have chunk encoded response uncomment if
+                    # and set chunk_size parameter to None.
+                    # if chunk:
+                    f.write(chunk)
+            return path
+    except requests.exceptions.HTTPError as e:
+        logger.error(e)
+        return None
 
 
 def load_model(config):
@@ -171,13 +177,14 @@ if __name__ == "__main__":
         input_files = glob(f"/Users/nikhil.k/data/dev/lbh/tc_data/25_11/{args.bag_id}.bag")
 
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
-    config.k = 20
+    config.k = 9
     # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/mlflow_best.ckpt"
     # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/epoch=141-step=1561.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
-    config.model_path = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
+    config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
     model.eval()
     # import onnxruntime as ort

@@ -5,6 +5,7 @@ import open3d as o3d
 from glob import glob
 from omegaconf import OmegaConf
 import copy
+import pandas as pd
 
 
 from lbh_measure.data import BagDataset
@@ -14,16 +15,18 @@ from lbh_measure.model_builder import ModelBuilder
 
 def run_inference(annotation_dir, input_pcd_dir):
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
-    config.k = 20
+    config.k = 9
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
     # config.model_path = "/Users/nikhil.k/epoch=14-step=899.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=42-step=2579.ckpt"
-    config.model_path = "/Users/nikhil.k/Downloads/epoch=2-step=179.ckpt"
+    config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=31-step=1919.ckpt"
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
     model.eval()
 
     dataset = BagDataset(input_pcd_dir, annotation_dir, downsample_factor=0.01, return_pcd=True)
+    data = []
     for index, i in enumerate(glob(annotation_dir + "/*")):
         file = i.split('/')[-1].split('.')[0]
         pcd = o3d.io.read_point_cloud(
@@ -32,9 +35,39 @@ def run_inference(annotation_dir, input_pcd_dir):
         pcd = pcd.voxel_down_sample(0.01)
 
         input_tensor, labels, _, box_pcd = dataset[index]
-        vol, width, height, depth, predicted_pcd = main(pcd, model, 'gpu',  vis=True)
-        pred_t_lineset = copy.deepcopy(predicted_pcd).translate((1.5, 0, 0))
-        o3d.visualization.draw_geometries([box_pcd, pred_t_lineset])
+        vol, width, height, depth, predicted_pcd_all, box_pred_pcd = main(pcd, model, 'gpu',
+                                                                          vis=False, debug_output=True)
+
+        h, w, d = box_pcd.get_max_bound() - box_pcd.get_min_bound()
+        hull_gt, _ = box_pcd.compute_convex_hull()
+        try:
+            hull_gt.orient_triangles()
+            hull_gt.compute_vertex_normals()
+            hull_vol = hull_gt.get_volume()
+        except RuntimeError as e:
+            # if not hull_vol:
+            hull_vol = w * h * d
+
+        hull_pred, _ = box_pred_pcd.compute_convex_hull()
+
+
+        lineset_gt = o3d.geometry.LineSet.create_from_triangle_mesh(hull_gt)
+        lineset_pred = o3d.geometry.LineSet.create_from_triangle_mesh(hull_pred)
+
+        pred_t_pcd = copy.deepcopy(predicted_pcd_all).translate((1.5, 0, 0))
+        pred_lineset_pcd = copy.deepcopy(lineset_pred).translate((1.5, 0, 0))
+        o3d.visualization.draw_geometries([box_pcd, lineset_gt, pred_t_pcd, pred_lineset_pcd])
+        output = {
+            'gt_h': h, 'gt_w': w, 'gt_d': d, 'gt_vol': hull_vol,
+            'pred_h': height, 'pred_w': width, 'pred_d': depth, 'pred_vol': vol,
+            'file': file
+        }
+        data.append(output)
+        print(output)
+        # pred_t_lineset = copy.deepcopy(predicted_pcd).translate((1.5, 0, 0))
+        # o3d.visualization.draw_geometries([box_pcd, pred_t_lineset])
+    df = pd.DataFrame(data)
+    print(df.to_markdown())
 
 
 

@@ -10,3 +10,7 @@ ML_MODEL_PATH = "/Users/nikhil.k/epoch=17-step=539.ckpt"
 COSMOS_DATABASE_NAME = 'measure'
 COSMOS_CONTAINER_NAME = 'audit'
 BLOB_CONTAINER_NAME = 'tcprofilerimages'
+LBH_MEASURE_STATUS_SUCCESS = 'success'
+LBH_MEASURE_STATUS_FAILURE = 'failure'
+TOPIC_NAME = ['filtered']
+BAG_URL = 'https://udprodstore.blob.core.windows.net/tcprofilerimages'

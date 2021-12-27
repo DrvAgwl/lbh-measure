@@ -59,7 +59,6 @@ class BagDataset(Dataset):
         ob = o3d.geometry.OrientedBoundingBox(center, R, extent)
 
         point_cloud_crop = pcd.crop(ob)
-        o3d.visualization.draw_geometries([pcd, ob])
         return point_cloud_crop, ob
 
     @staticmethod
