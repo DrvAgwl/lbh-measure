@@ -33,7 +33,7 @@ def color_pcd(pred_np, pcd):
 
 def post_process(pred, pcd):
     # Post Processing
-    predicted_pcd = color_pcd(pred, pcd)
+    # predicted_pcd = color_pcd(pred, pcd)
     # predicted_pcd = pcd
 
     box_filtered = pcd.select_by_index(np.where(pred == 1)[0])
@@ -69,8 +69,9 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch', 
     if model_type == 'torch':
         input_tensor = BagDataset.prepare_input(pcd_points, pcd_colors, pcd_normals, 'tensor', add_batch=True)
         pred = invoke_model.invoke_torch_model(model, input_tensor)
-        pred = pred.permute(0, 2, 1).contiguous()
-        pred = pred.argmax(dim=2).cpu().detach().numpy()[0]
+        pred_raw = pred.permute(0, 2, 1).contiguous()
+        pred = pred_raw.argmax(dim=2).cpu().detach().numpy()[0]
+
         # pred = pred.cpu().detach().numpy()[0]
     elif model_type == 'onnx':
         input_array = BagDataset.prepare_input(pcd_points, pcd_colors, pcd_normals, 'np', add_batch=True)
@@ -111,7 +112,7 @@ def main(pcd, model, device='cpu', vis=False, file_name="", model_type='torch', 
     if not hull_vol:
         hull_vol = w * h * d
     if debug_output:
-        return hull_vol, w, h, d, predicted_pcd, box_filtered
+        return hull_vol, w, h, d, predicted_pcd, box_filtered, pred_raw
     else:
         return hull_vol, w, h, d
 
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--input_dir", type=str, default=None, help="Input directory with annotation files")
     parser.add_argument("--bag_id", type=str, required=True, help="Input directory with annotation files")
     parser.add_argument(
-        "--vis", type=bool, required=True, help="Path to the training config with the hyperparams"
+        "--vis", type=bool, default=False, help="Path to the training config with the hyperparams"
     )
 
     args = parser.parse_args()
@@ -173,7 +174,7 @@ if __name__ == "__main__":
             # 'https://udprodstore.blob.core.windows.net/tcprofilerimages/', args.bag_id)
             "https://udprodstore.blob.core.windows.net/tcprofilerimages", args.bag_id)
         path_to_pcd = download_file(
-            url, base_path='/Users/nikhil.k/data/dev/lbh/tc_data/25_11/')
+            url, base_path='/Users/nikhil.k/data/dev/lbh/tc_data/25_11/', logger=None)
         input_files = glob(f"/Users/nikhil.k/data/dev/lbh/tc_data/25_11/{args.bag_id}.bag")
 
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')

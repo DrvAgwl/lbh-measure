@@ -35,6 +35,22 @@ kubernetes:
     volumeMounts:
       - name: ds-models-share
         mountPath: /models
+    env:
+      - name: CMS_DB_KEY
+        valueFrom:
+          secretKeyRef:
+            name: ds-models-common
+            key: lbh-measure-cms-db-key
+      - name: CMS_DB_URI
+        valueFrom:
+          secretKeyRef:
+            name: ds-models-common
+            key: lbh-measure-cms-db-uri
+      - name: STORAGE_CONN_STRING
+        valueFrom:
+          secretKeyRef:
+            name: ds-models-common
+            key: lbh-measure-storage-connection-string
   deploymentSpec:
     strategy:
       type: RollingUpdate

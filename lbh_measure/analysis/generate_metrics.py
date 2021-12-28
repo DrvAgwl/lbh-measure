@@ -4,9 +4,10 @@ import argparse
 import open3d as o3d
 from glob import glob
 from omegaconf import OmegaConf
+import torch
 import copy
 import pandas as pd
-
+from torchmetrics.functional import accuracy, iou, dice_score
 
 from lbh_measure.data import BagDataset
 from lbh_measure.model_inference import main
@@ -35,7 +36,7 @@ def run_inference(annotation_dir, input_pcd_dir):
         pcd = pcd.voxel_down_sample(0.01)
 
         input_tensor, labels, _, box_pcd = dataset[index]
-        vol, width, height, depth, predicted_pcd_all, box_pred_pcd = main(pcd, model, 'gpu',
+        vol, width, height, depth, predicted_pcd_all, box_pred_pcd, pred_tensor = main(pcd, model, 'gpu',
                                                                           vis=False, debug_output=True)
 
         h, w, d = box_pcd.get_max_bound() - box_pcd.get_min_bound()
@@ -56,12 +57,15 @@ def run_inference(annotation_dir, input_pcd_dir):
 
         pred_t_pcd = copy.deepcopy(predicted_pcd_all).translate((1.5, 0, 0))
         pred_lineset_pcd = copy.deepcopy(lineset_pred).translate((1.5, 0, 0))
-        o3d.visualization.draw_geometries([box_pcd, lineset_gt, pred_t_pcd, pred_lineset_pcd])
+        # o3d.visualization.draw_geometries([box_pcd, lineset_gt, pred_t_pcd, pred_lineset_pcd])
+        dice = dice_score(pred_tensor.squeeze(0), labels)
+        iou_score = iou(pred_tensor.squeeze(0), labels)
         output = {
             'gt_h': h, 'gt_w': w, 'gt_d': d, 'gt_vol': hull_vol,
             'pred_h': height, 'pred_w': width, 'pred_d': depth, 'pred_vol': vol,
-            'file': file
+            'file': file, 'dice': dice, 'iou': iou_score
         }
+
         data.append(output)
         print(output)
         # pred_t_lineset = copy.deepcopy(predicted_pcd).translate((1.5, 0, 0))

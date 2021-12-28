@@ -93,6 +93,7 @@ def ping():
     logger.info("Pong!")
     return "Pong!"
 
+
 @app.post("/predict")
 def predict(fields: PredictVolumeFields):
     bag_url = fields.bag_url
@@ -109,18 +110,17 @@ def predict(fields: PredictVolumeFields):
 
     return response
 
+
 # Complex Python Fields can be directly parsed with Json Post Request
 @app.on_event("startup")
-@repeat_every(seconds=1, raise_exceptions=True)  # 1 hour
+@repeat_every(seconds=60 * 60, raise_exceptions=True)  # 1 hour
 def poll_and_predict():
     try:
-        # key = "id"
-        # value = "AULM7GBTZMEKSCTGG2CRD6SWWX4JT"
-        start_ts = datetime.datetime.now()
-        end_ts = datetime.datetime.now()
-        query = f"SELECT * FROM r WHERE r._ts between 1637800431 and 1637883231"
-        # query = f"SELECT * FROM r"
-        # parameters = [{"name": f"@{key}", "value": value}]
+        end_ts = int(datetime.datetime.utcnow().timestamp())
+        start_ts = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+        start_ts = int(start_ts.utcnow().timestamp())
+
+        query = f"SELECT * FROM r WHERE r._ts between {end_ts} and {start_ts}"
         parameters = []
         enable_cross_partition_query = True
         doc = [i for i in cosmos_client.read_items(query, parameters, enable_cross_partition_query)]
