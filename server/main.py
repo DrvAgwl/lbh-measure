@@ -90,7 +90,7 @@ def start_inference(i):
     logger.info(f'The output values of {bag_url} is {output_doc}')
     i.update(output_doc)
     cosmos_client.upsert_item(i)
-    return
+    return output_doc
 
 
 @app.get("/healthcheck")
