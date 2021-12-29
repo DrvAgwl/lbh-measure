@@ -180,7 +180,7 @@ if __name__ == "__main__":
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
     config.k = 9
     # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/mlflow_best.ckpt"
-    # config.model_path = "/Users/nikhil.k/data/dev/lbh/databricks_models/epoch=141-step=1561.ckpt"
+
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=72-step=802.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=137-step=1517.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
