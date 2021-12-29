@@ -1,3 +1,4 @@
+import os
 import datetime
 import json
 
@@ -18,7 +19,9 @@ from lbh_measure.utils.request_types import PredictVolumeFields
 app = create_fast_api_server()
 ERROR_COUNTER = Counter("cron_error_counter", "Number of times the Cron has had exceptions", ["exception_count"])
 
-cosmos_client = CosmosClientBuilder(database_name="measure", container_name="audit")
+uri = os.getenv("CMS_DB_URI").strip('\n')
+key = os.getenv("CMS_DB_KEY").strip('\n')
+cosmos_client = CosmosClientBuilder(uri=uri, key=key, database_name="measure", container_name="audit")
 
 
 def get_model(model_type):
