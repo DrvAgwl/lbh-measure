@@ -67,6 +67,7 @@ def start_inference(i):
         return {"message": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}
 
     pcd = ConvertToPCD(topic_names=constants.TOPIC_NAME).get_pcd(bag_file_path)
+    pcd = pcd.voxel_down_sample(0.01)
     logger.info("Converted {}".format(bag_url))
 
     if not pcd:
