@@ -8,8 +8,8 @@ ML_MODEL_PATH = "/models/hardware/v0/model.ckpt"
 # ML_MODEL_PATH = "/Users/nikhil.k/epoch=17-step=539.ckpt"
 # ML_MODEL_PATH = "/tmp/test.onnx"
 
-COSMOS_DATABASE_NAME = 'lbh-measure'
-COSMOS_CONTAINER_NAME = 'audit'
+COSMOS_DATABASE_NAME = 'measure'
+COSMOS_CONTAINER_NAME = 'lbh-measure'
 
 BLOB_CONTAINER_NAME = 'tcprofilerimages'
 

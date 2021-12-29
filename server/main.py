@@ -21,7 +21,9 @@ ERROR_COUNTER = Counter("cron_error_counter", "Number of times the Cron has had 
 
 uri = os.getenv("CMS_DB_URI").strip('\n')
 key = os.getenv("CMS_DB_KEY").strip('\n')
-cosmos_client = CosmosClientBuilder(uri=uri, key=key, database_name="measure", container_name="audit")
+cosmos_client = CosmosClientBuilder(uri=uri, key=key,
+                                    database_name=constants.COSMOS_DATABASE_NAME,
+                                    container_name=constants.COSMOS_CONTAINER_NAME)
 
 
 def get_model(model_type):
