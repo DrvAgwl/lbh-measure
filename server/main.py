@@ -127,7 +127,7 @@ def poll_and_predict():
         start_ts = int(start_ts.utcnow().timestamp())
 
         # query = f"SELECT * FROM r WHERE r._ts between {end_ts} and {start_ts}"
-        query = f"SELECT * FROM r"
+        query = f"SELECT * FROM r WHERE NOT IS_DEFINED(r.status)"
         parameters = []
         enable_cross_partition_query = True
         doc = [i for i in cosmos_client.read_items(query, parameters, enable_cross_partition_query)]
