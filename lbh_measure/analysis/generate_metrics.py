@@ -21,7 +21,8 @@ def run_inference(annotation_dir, input_pcd_dir):
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
     # config.model_path = "/Users/nikhil.k/epoch=14-step=899.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=42-step=2579.ckpt"
-    config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
+    # config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
+    config.model_path = "/Users/nikhil.k/Downloads/epoch=49-step=2999.ckpt"
     # config.model_path = "/Users/nikhil.k/Downloads/epoch=31-step=1919.ckpt"
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
     model.eval()
