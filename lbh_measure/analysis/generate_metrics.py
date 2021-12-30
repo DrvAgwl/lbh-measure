@@ -14,16 +14,10 @@ from lbh_measure.model_inference import main
 from lbh_measure.model_builder import ModelBuilder
 
 
-def run_inference(annotation_dir, input_pcd_dir):
+def run_inference(annotation_dir, input_pcd_dir, model_dir):
     config = OmegaConf.load('/Users/nikhil.k/data/dev/lbh/udaan-measure/lbh/dgcnn/conf.yml')
     config.k = 9
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=44-step=1349.ckpt"
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=19-step=99.ckpt"
-    # config.model_path = "/Users/nikhil.k/epoch=14-step=899.ckpt"
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=42-step=2579.ckpt"
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=36-step=2219.ckpt"
-    config.model_path = "/Users/nikhil.k/Downloads/epoch=49-step=2999.ckpt"
-    # config.model_path = "/Users/nikhil.k/Downloads/epoch=31-step=1919.ckpt"
+    config.model_path = model_dir
     model = ModelBuilder.load_from_checkpoint(config=config, checkpoint_path=config.model_path)
     model.eval()
 
@@ -81,6 +75,7 @@ if __name__ == "__main__":
     parser.add_argument("--annotation_dir", type=str, required=True,
                         help="Directory with multiple user annotation files")
     parser.add_argument("--input_pcd_dir", type=str, required=True, help="Directory with Point Cloud files")
+    parser.add_argument("--model_dir", type=str, required=True, help="Directory for the torch model.")
     args = parser.parse_args()
-    run_inference(args.annotation_dir, args.input_pcd_dir)
+    run_inference(args.annotation_dir, args.input_pcd_dir, args.model_dir)
 
