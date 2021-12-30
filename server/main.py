@@ -1,8 +1,9 @@
-import os
 import datetime
 import json
+import os
 
 import omegaconf
+import requests
 import torch
 from fastapi_utils.tasks import repeat_every
 from prometheus_client import Counter
@@ -17,7 +18,9 @@ from lbh_measure.utils.convert_rosbag_to_pcd import ConvertToPCD
 from lbh_measure.utils.request_types import PredictVolumeFields
 
 app = create_fast_api_server()
-ERROR_COUNTER = Counter("cron_error_counter", "Number of times the Cron has had exceptions", ["exception_count"])
+ERROR_COUNTER = Counter("lbh_measure_cron_error_counter",
+                        "Number of times the Cron has had exceptions",
+                        ["exception_count"])
 
 uri = os.getenv("CMS_DB_URI").strip('\n')
 key = os.getenv("CMS_DB_KEY").strip('\n')
@@ -53,6 +56,35 @@ def set_status_to_failure(doc, message):
     cosmos_client.upsert_item(doc.update({"lbh_error": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}))
 
 
+def set_status_to_success(doc, message):
+    # Calling the logistics API.
+    try:
+        headers = {'Authorization': 'h6v5q9xqb23ppjc7bk9975hkawrxj6wa'}
+        data = {
+            # "awb": "${barcode}",
+            "length": doc['length'] * 10,
+            "width": doc['width'] * 10,
+            "height": doc['height'] * 10,
+            # "weight": "${wt*1000}",
+            "deviceId": doc["deviceId"],
+            "real_volume": doc['volume'],
+            "inscan_time": doc['createdAt'],
+            "img_data": ""
+        }
+        response = requests.post(constants.LOGISTICS_API_ENDPOINT, files=data, header=headers)
+        if response.status_code != 200:
+            message = "Logistics API call failed with exception {}".format(response.json())
+            set_status_to_failure(doc, message)
+            return {"message": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}
+
+        return cosmos_client.upsert_item(
+            doc.update({"lbh_error": message, "status": constants.LBH_MEASURE_STATUS_FAILURE})
+        )
+    except Exception as e:
+        set_status_to_failure(doc, "Logistics API call failed with exception {}".format(e))
+        return {"message": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}
+
+
 def start_inference(i):
     logger.info(f"Found info at {i}")
     log = json.loads(i.get("log", {}))
@@ -81,9 +113,9 @@ def start_inference(i):
     # vol, width, height, depth = main(pcd, model, device, False, bag_file_path, model_type='onnx')
     output_doc = {
         "volume": vol,
-        "width": width,
+        "length": depth,
+        "breadth": width,
         "height": height,
-        "depth": depth,
         "bag_url": bag_url,
         "sku_id": sku_id,
         "status": constants.LBH_MEASURE_STATUS_SUCCESS,
@@ -117,7 +149,6 @@ def predict(fields: PredictVolumeFields):
     return response
 
 
-# Complex Python Fields can be directly parsed with Json Post Request
 @app.on_event("startup")
 @repeat_every(seconds=60 * 60, raise_exceptions=True)  # 1 hour
 def poll_and_predict():
