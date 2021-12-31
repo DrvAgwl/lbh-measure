@@ -8,7 +8,7 @@ ML_MODEL_PATH = "/models/hardware/v0/model.ckpt"
 # ML_MODEL_PATH = "/Users/nikhil.k/epoch=17-step=539.ckpt"
 # ML_MODEL_PATH = "/tmp/test.onnx"
 
-LOGISTICS_API_ENDPOINT='https://logistics.udaan.com/logistics/lm/external/v2/profilerInfo'
+LOGISTICS_API_ENDPOINT = 'https://logistics.udaan.com/logistics/lm/external/v2/profilerInfo'
 COSMOS_DATABASE_NAME = 'measure'
 COSMOS_CONTAINER_NAME = 'lbh-measure'
 
@@ -17,6 +17,7 @@ BLOB_CONTAINER_NAME = 'tcprofilerimages'
 # STATUS
 LBH_MEASURE_STATUS_SUCCESS = 'success'
 LBH_MEASURE_STATUS_FAILURE = 'failure'
+LBH_MEASURE_STATUS_TODO = 'TO DO'
 
 TOPIC_NAME = ['filtered']
 BAG_URL = 'https://udprodstore.blob.core.windows.net/tcprofilerimages'

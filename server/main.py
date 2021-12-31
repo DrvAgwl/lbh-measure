@@ -71,11 +71,11 @@ def set_status_to_success(doc, message):
             "inscan_time": doc['createdAt'],
             "img_data": ""
         }
-        response = requests.post(constants.LOGISTICS_API_ENDPOINT, files=data, header=headers)
-        if response.status_code != 200:
-            message = "Logistics API call failed with exception {}".format(response.json())
-            set_status_to_failure(doc, message)
-            return {"message": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}
+        # response = requests.post(constants.LOGISTICS_API_ENDPOINT, files=data, header=headers)
+        # # if response.status_code != 200:
+        #     message = "Logistics API call failed with exception {}".format(response.json())
+        #     set_status_to_failure(doc, message)
+        #     return {"message": message, "status": constants.LBH_MEASURE_STATUS_FAILURE}
 
         return cosmos_client.upsert_item(
             doc.update({"lbh_error": message, "status": constants.LBH_MEASURE_STATUS_FAILURE})
@@ -157,7 +157,9 @@ def poll_and_predict():
         start_ts = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
         start_ts = int(start_ts.utcnow().timestamp())
 
-        query = f"SELECT * FROM r WHERE r._ts between {end_ts} and {start_ts} and NOT IS_DEFINED(r.status)"
+        query = f"-- SELECT * FROM r WHERE r._ts between {end_ts} and {start_ts} and NOT IS_DEFINED(r.status)"
+        # Query to run on all the entires
+        query = f"SELECT * FROM r WHERE r._ts NOT IS_DEFINED(r.status) or r.status={constants.LBH_MEASURE_STATUS_TODO}"
         parameters = []
         enable_cross_partition_query = True
         doc = [i for i in cosmos_client.read_items(query, parameters, enable_cross_partition_query)]
