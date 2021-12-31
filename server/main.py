@@ -1,4 +1,3 @@
-import datetime
 import json
 import os
 
@@ -153,10 +152,6 @@ def predict(fields: PredictVolumeFields):
 @repeat_every(seconds=60 * 60, raise_exceptions=True)  # 1 hour
 def poll_and_predict():
     try:
-        end_ts = int(datetime.datetime.utcnow().timestamp())
-        start_ts = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-        start_ts = int(start_ts.utcnow().timestamp())
-
         # query = f"-- SELECT * FROM r WHERE r._ts between {end_ts} and {start_ts} and NOT IS_DEFINED(r.status)"
         # Query to run on all the entires
         query = f'SELECT * FROM r WHERE NOT IS_DEFINED(r.status) or r.status="{constants.LBH_MEASURE_STATUS_TODO}"'
